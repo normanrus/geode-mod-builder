@@ -13,7 +13,11 @@
     },
     "tags": ["developer", "utility", "interface", "offline"],
     "links": {
-        "source": "https://github.com/kirillp/geode-mod-builder"
+        "source": "https://github.com/normanrus/geode-mod-builder",
+        "issues": {
+            "info": "Report issues on the GitHub repository.",
+            "url": "https://github.com/normanrus/geode-mod-builder/issues"
+        }
     },
     "resources": {
         "sprites": [

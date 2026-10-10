@@ -51,6 +51,8 @@ jobs:
     needs: ['build']
 
     steps:
+      - uses: actions/checkout@v4
+
       - uses: geode-sdk/build-geode-mod/combine@main
         id: build
 
@@ -64,4 +66,6 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: ${{ steps.build.outputs.build-output }}/*.geode
-          generate_release_notes: true
+          body_path: changelog.md
+          draft: false
+          prerelease: false
