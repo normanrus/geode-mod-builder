@@ -102,8 +102,10 @@ void ElementTree::refresh() {
             if (m_commit) m_commit("Select");
         }, 200.f, 0.4f);
         btn->setPosition({110.f, y});
-        if (selected) btn->setColor({120, 180, 255});
-        else if (hasError) btn->setColor({255, 120, 120});
+        if (selected || hasError) {
+            if (auto* rgba = typeinfo_cast<cocos2d::CCNodeRGBA*>(btn->getDisplayNode()))
+                rgba->setColor(selected ? cocos2d::ccColor3B{120, 180, 255} : cocos2d::ccColor3B{255, 120, 120});
+        }
         row->addChild(btn);
 
         y -= rowH;

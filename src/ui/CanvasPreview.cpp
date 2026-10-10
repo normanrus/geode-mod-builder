@@ -27,7 +27,7 @@ bool CanvasPreview::init(EditorState* state, std::function<void(const std::strin
     this->drawGrid({400.f, 300.f});
 
     this->setTouchEnabled(true);
-    this->setTouchMode(cocos2d::kCCTouchModeOneByOne);
+    this->setTouchMode(cocos2d::kCCTouchesOneByOne);
     this->rebuild();
     return true;
 }
@@ -142,7 +142,9 @@ void CanvasPreview::drawElement(const Element& e, cocos2d::CCNode* parent, cocos
         if (auto* rgba = typeinfo_cast<cocos2d::CCNodeRGBA*>(node))
             rgba->setOpacity(80);
     }
-    if (e.id == m_state->selectedId) node->setColor({255, 220, 120});
+    if (e.id == m_state->selectedId) {
+        if (auto* rgba = typeinfo_cast<cocos2d::CCNodeRGBA*>(node)) rgba->setColor({255, 220, 120});
+    }
     parent->addChild(node, e.zOrder);
 
     // Container outline.
@@ -184,7 +186,7 @@ void CanvasPreview::rebuild() {
             cocos2d::CCPoint childOrigin = origin;
             float cw = pw, ch = ph;
             if (isContainerType(e->type)) {
-                childOrigin = {origin.x + e->x, origin.y + e->y};
+                childOrigin = cocos2d::CCPoint{origin.x + e->x, origin.y + e->y};
                 cw = e->width > 0.f ? e->width : pw;
                 ch = e->height > 0.f ? e->height : ph;
             }
@@ -216,7 +218,7 @@ std::string CanvasPreview::elementAt(cocos2d::CCPoint worldPoint, std::vector<st
             cocos2d::CCPoint childOrigin = origin;
             float cw = pw, ch = ph;
             if (isContainerType(e->type)) {
-                childOrigin = {cx, cy};
+                childOrigin = cocos2d::CCPoint{cx, cy};
                 cw = w; ch = h;
             }
             for (const auto& c : e->children) hit(c, childOrigin, cw, ch);
@@ -251,7 +253,7 @@ bool CanvasPreview::ccTouchBegan(cocos2d::CCTouch* touch, cocos2d::CCEvent*) {
         if (e) {
             m_dragging = true;
             m_dragStart = world;
-            m_origPos = {e->x, e->y};
+            m_origPos = cocos2d::CCPoint{e->x, e->y};
         }
     }
     return true;
@@ -296,7 +298,7 @@ void CanvasPreview::alignSelected(int mode) {
         if (auto* par = m_state->project.findElement(e->parent)) {
             cw = par->width > 0.f ? par->width : cw;
             ch = par->height > 0.f ? par->height : ch;
-            origin = {par->x + par->width / 2.f, par->y + par->height / 2.f};
+            origin = cocos2d::CCPoint{par->x + par->width / 2.f, par->y + par->height / 2.f};
         }
     }
     switch (mode) {
