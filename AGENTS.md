@@ -28,5 +28,24 @@ it edits a JSON project model and generates a real, compilable Geode mod.
 - Model is separated from UI; generated code is deterministic and escaped.
 - Never report success without actual verification.
 
+## CI & release
+- GitHub Actions `.github/workflows/build.yml`: builds Windows/macOS/Android32/
+  Android64 via `geode-sdk/build-geode-mod`, and on a `v*` tag creates/updates
+  a Release with the combined `.geode` (all platforms in one file).
+- CI runs on push to `master`/`main` and on the Geode version bump, so the
+  release asset is rebuilt. Full mod compilation is verified in CI, not here.
+- Release: https://github.com/normanrus/geode-mod-builder/releases/tag/v0.1.0
+
+## UI notes (GD/cocos2d specifics)
+- `ButtonSprite`, `CCMenuItemExt`, `CCMenuItemSpriteExtra`, `CCMenuItemToggler`
+  live at GLOBAL scope in GD bindings, NOT inside `cocos2d`.
+- `CCMenu` must only contain `CCMenuItem` children; putting labels/sprites/
+  TextInput in a `CCMenu` breaks touch handling. Use a plain `CCNode` for
+  read-only content (e.g. CanvasPreview world).
+- `CCMenu::alignItemsInColumns(...)` is varargs terminated by a trailing `0`.
+- `geode::Popup::init/onClose/setTitle` are protected: call `Popup::init` from
+  the subclass and use `createQuickPopup` for confirmations. For a light custom
+  panel, prefer a plain `CCLayer` over `Popup`.
+
 ## Env quirks
 - `unzip` is missing -> use `python3 -c "import zipfile; ..."`.
