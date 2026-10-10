@@ -14,8 +14,9 @@ protected:
     EditorState* m_state = nullptr;
     std::function<void(const std::string&)> m_commit;
     cocos2d::CCNode* m_content = nullptr;
+    cocos2d::CCMenu* m_menu = nullptr;
 
-    bool init(EditorState* state, std::function<void(const std::string&)> commit);
+    bool init(EditorState* state, std::function<void(const std::string&)> commit, cocos2d::CCSize size);
     void addRow(const std::string& label, cocos2d::CCNode* input, float& y);
     void onCommonText(const std::string& key, const std::string& value);
     void onCommonNumber(const std::string& key, const std::string& value);
@@ -25,7 +26,7 @@ protected:
     void onDelete();
 
 public:
-    static PropertiesPanel* create(EditorState* state, std::function<void(const std::string&)> commit);
+    static PropertiesPanel* create(EditorState* state, std::function<void(const std::string&)> commit, cocos2d::CCSize size);
     void refresh();
 };
 

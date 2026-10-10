@@ -33,6 +33,8 @@ protected:
     void onBuild();
     void onActions();
     void onPreviewPopup();
+    void onNewElement();
+    void onNewElementType(ElementType type);
 
     void commitAndRefresh(const std::string& label);
 

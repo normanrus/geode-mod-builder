@@ -26,6 +26,8 @@ public:
 
     void openProject(const std::string& fileName);
 
+    void keyBackClicked() override;
+
 protected:
     cocos2d::CCNode* m_recentContainer = nullptr;
 };

@@ -30,14 +30,14 @@ protected:
     cocos2d::CCPoint m_origPos{};
     int m_cycleIndex = 0;
 
-    bool init(EditorState* state, std::function<void(const std::string&)> commit);
+    bool init(EditorState* state, std::function<void(const std::string&)> commit, cocos2d::CCSize size);
     void rebuild();
     void drawElement(const Element& e, cocos2d::CCNode* parent, cocos2d::CCPoint origin, float parentW, float parentH);
     void drawGrid(cocos2d::CCSize const& size);
     std::string elementAt(cocos2d::CCPoint worldPoint, std::vector<std::string>& hits) const;
 
 public:
-    static CanvasPreview* create(EditorState* state, std::function<void(const std::string&)> commit);
+    static CanvasPreview* create(EditorState* state, std::function<void(const std::string&)> commit, cocos2d::CCSize size);
     void refresh() { this->rebuild(); }
     void setZoom(float z);
     float zoom() const { return m_zoom; }

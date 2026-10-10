@@ -19,114 +19,125 @@ bool EditorLayer::init() {
     if (!m_state) return false;
 
     auto win = CCDirector::sharedDirector()->getWinSize();
+    const float W = win.width;
+    const float H = win.height;
 
-    auto* bg = makePanel(win, {16, 16, 20}, 255);
-    if (bg) this->addChild(bg, -10);
+    // Full-screen dark backdrop, kept behind everything else.
+    auto* bg = makePanel({W, H}, {16, 16, 20}, 255);
+    if (bg) {
+        bg->setAnchorPoint({0.f, 0.f});
+        bg->setPosition({0.f, 0.f});
+        this->addChild(bg, -10);
+    }
 
-    m_title = makeLabel("", "goldFont.fnt", 0.6f);
+    m_title = makeLabel("", "goldFont.fnt", 0.45f);
     m_title->setAnchorPoint({0.f, 0.5f});
-    m_title->setPosition({10.f, win.height - 20.f});
+    m_title->setPosition({8.f, H - 10.f});
     this->addChild(m_title);
 
-    // --- Toolbar -----------------------------------------------------------
-    auto* toolbar = CCMenu::create();
-    this->addChild(toolbar, 5);
-
-    float tx = 180.f;
-    float ty = win.height - 20.f;
-    auto addTool = [&](const char* label, std::function<void()> cb, float w = 70.f) {
-        auto* b = makeButton(label, std::move(cb), w, 0.45f);
-        b->setPosition({tx, ty});
-        toolbar->addChild(b);
-        tx += w + 6.f;
+    // Toolkit rows use CCMenu + alignItemsHorizontally so items are evenly
+    // spaced regardless of label width, at the fixed GD design resolution.
+    auto mkRow = [&](float y, float scale) {
+        auto* m = CCMenu::create();
+        m->setPosition({W / 2.f, y});
+        m->setScale(scale);
+        this->addChild(m, 10);
+        return m;
     };
-    addTool("Back", [this]() { this->onBack(); }, 60.f);
-    addTool("Save", [this]() { this->onSave(); }, 60.f);
-    addTool("Save As", [this]() { this->onSaveAs(); }, 70.f);
-    addTool("Undo", [this]() { this->onUndo(); }, 60.f);
-    addTool("Redo", [this]() { this->onRedo(); }, 60.f);
-    addTool("Generate", [this]() { this->onGenerate(); }, 80.f);
-    addTool("Build", [this]() { this->onBuild(); }, 60.f);
-    addTool("Actions", [this]() { this->onActions(); }, 70.f);
+    auto addItem = [](CCMenu* m, const char* label, std::function<void()> cb) {
+        if (auto* b = makeButton(label, std::move(cb), 0.5f)) m->addChild(b);
+    };
 
-    // --- Left: element palette + tree -------------------------------------
-    auto* palette = CCMenu::create();
-    this->addChild(palette, 5);
-    float px = 20.f, py = win.height - 90.f;
+    auto* row1 = mkRow(H - 12.f, 0.34f);
+    addItem(row1, "Back",    [this]() { this->onBack(); });
+    addItem(row1, "Save",    [this]() { this->onSave(); });
+    addItem(row1, "Save As", [this]() { this->onSaveAs(); });
+    addItem(row1, "Undo",    [this]() { this->onUndo(); });
+    addItem(row1, "Redo",    [this]() { this->onRedo(); });
+    row1->alignItemsHorizontallyWithPadding(2.f);
+
+    auto* row2 = mkRow(H - 30.f, 0.34f);
+    addItem(row2, "New",      [this]() { this->onNewElement(); });
+    addItem(row2, "Generate", [this]() { this->onGenerate(); });
+    addItem(row2, "Build",    [this]() { this->onBuild(); });
+    addItem(row2, "Actions",  [this]() { this->onActions(); });
+    addItem(row2, "Preview",  [this]() { this->onPreviewPopup(); });
+    row2->alignItemsHorizontallyWithPadding(2.f);
+
+    // Element palette: adds an element of the given type (see onNewElementType).
     struct Pal { const char* label; ElementType type; };
     static const Pal pals[] = {
         {"Button", ElementType::Button}, {"Label", ElementType::Label},
         {"Sprite", ElementType::Sprite}, {"Panel", ElementType::Panel},
         {"Popup", ElementType::Popup}, {"Checkbox", ElementType::Checkbox},
-        {"Slider", ElementType::Slider}, {"Text Input", ElementType::TextInput},
+        {"Slider", ElementType::Slider}, {"Input", ElementType::TextInput},
         {"Close", ElementType::CloseButton},
     };
-    int pi = 0;
-    for (const auto& p : pals) {
-        auto* b = makeButton(p.label, [this, t = p.type]() { m_tree->addElement(t); }, 100.f, 0.4f);
-        b->setPosition({px, py});
-        palette->addChild(b);
-        px += 106.f;
-        if (++pi % 2 == 0) { px = 20.f; py -= 28.f; }
-    }
+    auto* palette = CCMenu::create();
+    palette->setPosition({W / 2.f, H - 48.f});
+    palette->setScale(0.34f);
+    this->addChild(palette, 10);
+    for (const auto& p : pals)
+        if (auto* b = makeButton(p.label, [this, t = p.type]() { this->onNewElementType(t); }, 0.5f))
+            palette->addChild(b);
+    palette->alignItemsHorizontallyWithPadding(2.f);
 
-    m_tree = ElementTree::create(m_state.get(), [this](const std::string& l) { this->commitAndRefresh(l); });
-    m_tree->setPosition({10.f, 168.f});
-    this->addChild(m_tree);
-
-    // Tree operations toolbar.
+    // Element tree operations.
     auto* treeOps = CCMenu::create();
-    this->addChild(treeOps, 5);
-    float ox = 10.f;
-    float oy = 168.f;
-    auto addOp = [&](const char* label, std::function<void()> cb, float w = 60.f) {
-        auto* b = makeButton(label, std::move(cb), w, 0.4f);
-        b->setPosition({ox, oy});
-        treeOps->addChild(b);
-        ox += w + 4.f;
-    };
-    addOp("Up", [this]() { m_tree->moveSelected(-1); }, 50.f);
-    addOp("Down", [this]() { m_tree->moveSelected(1); }, 56.f);
-    addOp("Dup", [this]() { m_tree->duplicateSelected(); }, 50.f);
-    addOp("Nest", [this]() { m_tree->nestSelected(); }, 56.f);
-    addOp("Parent", [this]() { m_tree->selectParent(); }, 60.f);
-    addOp("Del", [this]() { m_tree->deleteSelected(); }, 50.f);
+    treeOps->setPosition({W / 2.f, H - 66.f});
+    treeOps->setScale(0.32f);
+    this->addChild(treeOps, 10);
+    addItem(treeOps, "Up",     [this]() { m_tree->moveSelected(-1); });
+    addItem(treeOps, "Down",   [this]() { m_tree->moveSelected(1); });
+    addItem(treeOps, "Dup",    [this]() { m_tree->duplicateSelected(); });
+    addItem(treeOps, "Nest",   [this]() { m_tree->nestSelected(); });
+    addItem(treeOps, "Parent", [this]() { m_tree->selectParent(); });
+    addItem(treeOps, "Del",    [this]() { m_tree->deleteSelected(); });
+    treeOps->alignItemsHorizontallyWithPadding(2.f);
 
-    // --- Center: canvas ----------------------------------------------------
-    m_canvas = CanvasPreview::create(m_state.get(), [this](const std::string& l) { this->commitAndRefresh(l); });
-    m_canvas->setPosition({250.f, 60.f});
-    this->addChild(m_canvas);
-
+    // Canvas operations.
     auto* canvasOps = CCMenu::create();
-    this->addChild(canvasOps, 5);
-    float cx = 250.f;
-    float cy = win.height - 150.f;
-    auto addCanvas = [&](const char* label, std::function<void()> cb, float w = 54.f) {
-        auto* b = makeButton(label, std::move(cb), w, 0.38f);
-        b->setPosition({cx, cy});
-        canvasOps->addChild(b);
-        cx += w + 4.f;
-    };
-    addCanvas("Z+", [this]() { m_canvas->setZoom(m_canvas->zoom() + 0.25f); }, 44.f);
-    addCanvas("Z-", [this]() { m_canvas->setZoom(m_canvas->zoom() - 0.25f); }, 44.f);
-    addCanvas("Snap", [this]() { m_canvas->toggleSnap(); notify(m_canvas->snap() ? "Snap on" : "Snap off"); }, 54.f);
-    addCanvas("L", [this]() { m_canvas->alignSelected(0); }, 34.f);
-    addCanvas("R", [this]() { m_canvas->alignSelected(1); }, 34.f);
-    addCanvas("T", [this]() { m_canvas->alignSelected(2); }, 34.f);
-    addCanvas("B", [this]() { m_canvas->alignSelected(3); }, 34.f);
-    addCanvas("H", [this]() { m_canvas->alignSelected(4); }, 34.f);
-    addCanvas("V", [this]() { m_canvas->alignSelected(5); }, 34.f);
-    addCanvas("Preview Popup", [this]() { this->onPreviewPopup(); }, 100.f);
+    canvasOps->setPosition({W / 2.f, H - 84.f});
+    canvasOps->setScale(0.32f);
+    this->addChild(canvasOps, 10);
+    addItem(canvasOps, "Z+",   [this]() { m_canvas->setZoom(m_canvas->zoom() + 0.25f); });
+    addItem(canvasOps, "Z-",   [this]() { m_canvas->setZoom(m_canvas->zoom() - 0.25f); });
+    addItem(canvasOps, "Snap", [this]() { m_canvas->toggleSnap(); notify(m_canvas->snap() ? "Snap on" : "Snap off"); });
+    addItem(canvasOps, "L",    [this]() { m_canvas->alignSelected(0); });
+    addItem(canvasOps, "R",    [this]() { m_canvas->alignSelected(1); });
+    addItem(canvasOps, "T",    [this]() { m_canvas->alignSelected(2); });
+    addItem(canvasOps, "B",    [this]() { m_canvas->alignSelected(3); });
+    addItem(canvasOps, "H",    [this]() { m_canvas->alignSelected(4); });
+    addItem(canvasOps, "V",    [this]() { m_canvas->alignSelected(5); });
+    canvasOps->alignItemsHorizontallyWithPadding(2.f);
 
-    // --- Right: properties -------------------------------------------------
-    m_props = PropertiesPanel::create(m_state.get(), [this](const std::string& l) { this->commitAndRefresh(l); });
-    m_props->setPosition({win.width - 310.f, 60.f});
-    this->addChild(m_props);
+    // Three columns: tree | canvas | properties.
+    const float colTop = H - 100.f;
+    const float colBottom = 22.f;
+    const float colH = colTop - colBottom;
 
-    // --- Status bar --------------------------------------------------------
-    m_status = makeLabel("", "bigFont.fnt", 0.4f);
+    const float treeW = 112.f;
+    const float canvasX = 4.f + treeW + 4.f;
+    const float propsW = 196.f;
+    const float canvasW = W - canvasX - propsW - 8.f;
+    const float propsX = canvasX + canvasW + 4.f;
+
+    m_tree = ElementTree::create(m_state.get(), [this](const std::string& l) { this->commitAndRefresh(l); }, {treeW, colH});
+    m_tree->setPosition({6.f, colBottom});
+    this->addChild(m_tree, 1);
+
+    m_canvas = CanvasPreview::create(m_state.get(), [this](const std::string& l) { this->commitAndRefresh(l); }, {canvasW, colH});
+    m_canvas->setPosition({canvasX, colBottom});
+    this->addChild(m_canvas, 1);
+
+    m_props = PropertiesPanel::create(m_state.get(), [this](const std::string& l) { this->commitAndRefresh(l); }, {propsW, colH});
+    m_props->setPosition({propsX, colBottom});
+    this->addChild(m_props, 1);
+
+    // Status bar.
+    m_status = makeLabel("", "bigFont.fnt", 0.32f);
     m_status->setAnchorPoint({0.f, 0.5f});
-    m_status->setPosition({10.f, 20.f});
+    m_status->setPosition({8.f, 11.f});
     this->addChild(m_status);
 
     this->rebuildAll();
@@ -352,6 +363,62 @@ void EditorLayer::onActions() {
     ActionEditor::create(m_state.get(),
         [this](const std::string& l) { this->commitAndRefresh(l); },
         [this]() { this->rebuildAll(); })->show();
+}
+
+void EditorLayer::onNewElementType(ElementType type) {
+    if (m_tree) m_tree->addElement(type);
+}
+
+void EditorLayer::onNewElement() {
+    // "New" opens a small dark panel of element types: a single entry point
+    // that still covers every supported element.
+    auto win = CCDirector::sharedDirector()->getWinSize();
+    auto* panel = CCLayer::create();
+    if (!panel) return;
+    panel->setContentSize(win);
+
+    // Dimmer that swallows touches behind the panel.
+    auto* dim = makePanel(win, {0, 0, 0}, 150);
+    if (dim) panel->addChild(dim, 0);
+
+    CCSize psize{280.f, 176.f};
+    auto* bg = makePanel(psize, {26, 26, 32}, 255);
+    if (bg) {
+        bg->setAnchorPoint({0.5f, 0.5f});
+        bg->setPosition({win.width / 2.f, win.height / 2.f});
+        panel->addChild(bg, 1);
+    }
+    auto* title = makeLabel("New Element", "goldFont.fnt", 0.6f);
+    title->setPosition({win.width / 2.f, win.height / 2.f + 64.f});
+    panel->addChild(title, 2);
+
+    auto* menu = CCMenu::create();
+    menu->setPosition({win.width / 2.f, win.height / 2.f - 6.f});
+    panel->addChild(menu, 2);
+    static const std::pair<const char*, ElementType> items[] = {
+        {"Button", ElementType::Button}, {"Label", ElementType::Label},
+        {"Sprite", ElementType::Sprite}, {"Panel", ElementType::Panel},
+        {"Popup", ElementType::Popup},   {"Checkbox", ElementType::Checkbox},
+        {"Slider", ElementType::Slider}, {"Text Input", ElementType::TextInput},
+        {"Close Button", ElementType::CloseButton},
+    };
+    for (const auto& it : items) {
+        auto* b = makeButton(it.first, [this, panel, t = it.second]() {
+            if (m_tree) m_tree->addElement(t);
+            panel->removeFromParent();
+        }, 0.45f);
+        if (b) menu->addChild(b);
+    }
+    menu->alignItemsInColumns(3, 3, 3, 0);
+
+    auto* closeMenu = CCMenu::create();
+    closeMenu->setPosition({win.width / 2.f, win.height / 2.f - 64.f});
+    panel->addChild(closeMenu, 2);
+    if (auto* c = makeButton("Cancel", [panel]() { panel->removeFromParent(); }, 0.5f))
+        closeMenu->addChild(c);
+
+    if (auto* scene = CCDirector::sharedDirector()->getRunningScene())
+        scene->addChild(panel, 100);
 }
 
 EditorLayer* EditorLayer::create(std::shared_ptr<EditorState> state) {

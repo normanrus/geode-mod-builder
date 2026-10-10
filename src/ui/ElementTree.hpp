@@ -16,11 +16,12 @@ protected:
     std::function<void(const std::string&)> m_commit; // commit + rebuild
     std::shared_ptr<ValidationResult> m_validation;
     cocos2d::CCNode* m_list = nullptr;
+    cocos2d::CCMenu* m_menu = nullptr;
 
-    bool init(EditorState* state, std::function<void(const std::string&)> commit);
+    bool init(EditorState* state, std::function<void(const std::string&)> commit, cocos2d::CCSize size);
 
 public:
-    static ElementTree* create(EditorState* state, std::function<void(const std::string&)> commit);
+    static ElementTree* create(EditorState* state, std::function<void(const std::string&)> commit, cocos2d::CCSize size);
     void setValidation(std::shared_ptr<ValidationResult> v) { m_validation = std::move(v); }
     void refresh();
 

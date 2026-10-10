@@ -13,39 +13,51 @@ using namespace geode::prelude;
 
 namespace gmb {
 
-bool PropertiesPanel::init(EditorState* state, std::function<void(const std::string&)> commit) {
+bool PropertiesPanel::init(EditorState* state, std::function<void(const std::string&)> commit, cocos2d::CCSize size) {
     if (!CCNode::init()) return false;
     m_state = state;
     m_commit = std::move(commit);
-    this->setContentSize({300.f, 300.f});
+    this->setContentSize(size);
 
-    auto* scroll = ScrollLayer::create({300.f, 300.f});
+    auto* scroll = ScrollLayer::create({size.width, size.height});
+    scroll->setPosition({0.f, 0.f});
     this->addChild(scroll);
     m_content = scroll->m_contentLayer;
+
+    // A CCMenu inside the scroll content so buttons and togglers receive
+    // touches (a bare CCNode has no touch handling).
+    m_menu = CCMenu::create();
+    m_menu->setPosition({0.f, 0.f});
+    m_content->addChild(m_menu);
     return true;
 }
 
-PropertiesPanel* PropertiesPanel::create(EditorState* state, std::function<void(const std::string&)> commit) {
+PropertiesPanel* PropertiesPanel::create(EditorState* state, std::function<void(const std::string&)> commit, cocos2d::CCSize size) {
     auto* ret = new PropertiesPanel();
-    if (ret->init(state, std::move(commit))) { ret->autorelease(); return ret; }
+    if (ret->init(state, std::move(commit), size)) { ret->autorelease(); return ret; }
     delete ret;
     return nullptr;
 }
 
 void PropertiesPanel::addRow(const std::string& label, cocos2d::CCNode* input, float& y) {
+    const float w = this->getContentSize().width;
     auto* lbl = makeLabel(label, "bigFont.fnt", 0.4f);
     lbl->setAnchorPoint({1.f, 0.5f});
-    lbl->setPosition({90.f, y});
+    lbl->setPosition({w * 0.32f, y});
     m_content->addChild(lbl);
     if (input) {
-        input->setPosition({200.f, y});
-        m_content->addChild(input);
+        input->setPosition({w * 0.65f, y});
+        // CCMenu only supports CCMenuItem children, so only menu items go into
+        // the panel's menu; text inputs and labels handle their own display.
+        bool isMenuItem = typeinfo_cast<cocos2d::CCMenuItem*>(input) != nullptr;
+        if (isMenuItem && m_menu) m_menu->addChild(input);
+        else m_content->addChild(input);
     }
     y -= 26.f;
 }
 
 static geode::TextInput* makeField(const std::string& value, geode::CommonFilter filter,
-                                   std::function<void(const std::string&)> onChange, float width = 150.f) {
+                                   std::function<void(const std::string&)> onChange, float width = 118.f) {
     auto* in = geode::TextInput::create(width, "");
     in->setCommonFilter(filter);
     in->setString(value);
@@ -135,9 +147,9 @@ void PropertiesPanel::refresh() {
     auto* e = m_state->project.findElement(m_state->selectedId);
     if (!e) {
         auto* none = makeLabel("No element selected.", "bigFont.fnt", 0.45f);
-        none->setPosition({150.f, 260.f});
+        none->setPosition({this->getContentSize().width / 2.f, 260.f});
         m_content->addChild(none);
-        m_content->setContentSize({300.f, 300.f});
+        m_content->setContentSize({this->getContentSize().width, 300.f});
         return;
     }
 
@@ -169,32 +181,22 @@ void PropertiesPanel::refresh() {
         size_t idx = it == anchors.end() ? 0 : (it - anchors.begin() + 1) % anchors.size();
         onCommonText("anchor", anchors[idx]);
         refresh();
-    }, 150.f, 0.4f), y);
+    }, 0.4f), y);
 
     bool canToggleVis = true;
     if (canToggleVis) {
-        // Togglers must live in a CCMenu to receive touches.
-        auto* visMenu = CCMenu::create();
-        visMenu->setPosition({0.f, 0.f});
-        auto* visTog = CCMenuItemExt::createTogglerWithStandardSprites(0.7f, [this](CCMenuItemToggler* t) {
-            onCommonBool("visible", !t->isToggled());
-        });
-        if (!e->visible) visTog->toggle(true);
-        visTog->setPosition({200.f, y});
-        visMenu->addChild(visTog);
-        addRow("Visible", nullptr, y);
-        m_content->addChild(visMenu);
-
-        auto* enMenu = CCMenu::create();
-        enMenu->setPosition({0.f, 0.f});
-        auto* enTog = CCMenuItemExt::createTogglerWithStandardSprites(0.7f, [this](CCMenuItemToggler* t) {
-            onCommonBool("enabled", !t->isToggled());
-        });
-        if (!e->enabled) enTog->toggle(true);
-        enTog->setPosition({200.f, y});
-        enMenu->addChild(enTog);
-        addRow("Enabled", nullptr, y);
-        m_content->addChild(enMenu);
+        const float tw = this->getContentSize().width;
+        // Togglers live in the panel's menu so they receive touches.
+        auto addToggle = [&](const char* label, bool value, std::function<void(bool)> apply) {
+            addRow(label, nullptr, y);
+            auto* tog = CCMenuItemExt::createTogglerWithStandardSprites(0.7f,
+                [apply](CCMenuItemToggler* t) { apply(!t->isToggled()); });
+            if (!value) tog->toggle(true);
+            tog->setPosition({tw * 0.65f, y + 26.f});
+            m_menu->addChild(tog);
+        };
+        addToggle("Visible", e->visible, [this](bool v) { onCommonBool("visible", v); });
+        addToggle("Enabled", e->enabled, [this](bool v) { onCommonBool("enabled", v); });
     }
 
     // Parent info.
@@ -227,7 +229,7 @@ void PropertiesPanel::refresh() {
                 size_t idx = it == ids.end() ? 0 : (it - ids.begin() + 1) % ids.size();
                 onPropText("asset", ids[idx]);
                 refresh();
-            }, 150.f, 0.4f), y);
+            }, 0.4f), y);
     } else if (e->type == ElementType::Popup) {
         addRow("Title", makeField(e->props["title"].asString(), geode::CommonFilter::Any,
             [this](std::string const& s) { onPropText("title", s); }), y);
@@ -254,18 +256,19 @@ void PropertiesPanel::refresh() {
     for (auto& a : m_state->project.actions) if (a.params["owner"].asString() == e->id) actionCount++;
     addRow("Actions", makeLabel(std::to_string(actionCount), "bigFont.fnt", 0.4f), y);
 
-    m_content->setContentSize({300.f, std::max(300.f, 300.f + (285.f - y))});
+    const float pw = this->getContentSize().width;
+    m_content->setContentSize({pw, std::max(this->getContentSize().height, 300.f + (285.f - y))});
 
-    auto* deleteBtn = makeButton("Delete Element", [this]() { this->onDelete(); }, 150.f, 0.45f);
-    deleteBtn->setPosition({150.f, y - 6.f});
-    m_content->addChild(deleteBtn);
+    auto* deleteBtn = makeButton("Delete Element", [this]() { this->onDelete(); }, 0.45f);
+    deleteBtn->setPosition({pw / 2.f, y - 6.f});
+    m_menu->addChild(deleteBtn);
     y -= 40.f;
 
-    auto* actionsBtn = makeButton("Edit Actions & Events", [this]() {
+    auto* actionsBtn = makeButton("Edit Actions", [this]() {
         ActionEditor::create(m_state, m_commit, [this]() { if (m_commit) m_commit("Edit actions"); })->show();
-    }, 220.f, 0.45f);
-    actionsBtn->setPosition({150.f, y - 6.f});
-    m_content->addChild(actionsBtn);
+    }, 0.45f);
+    actionsBtn->setPosition({pw / 2.f, y - 6.f});
+    m_menu->addChild(actionsBtn);
 }
 
 } // namespace gmb

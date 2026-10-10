@@ -11,50 +11,47 @@ using namespace geode::prelude;
 namespace gmb {
 
 bool ActionEditor::init(EditorState* state, std::function<void(const std::string&)> commit, std::function<void()> onChanged) {
-    if (!Popup::init(420.f, 300.f)) return false;
+    if (!Popup::init(440.f, 340.f)) return false;
     m_state = state;
     m_commit = std::move(commit);
     m_onChanged = std::move(onChanged);
     this->setTitle("Actions & Events");
 
-    auto* scroll = ScrollLayer::create({390.f, 210.f});
-    scroll->setPosition({15.f, 40.f});
-    m_mainLayer->addChild(scroll);
-    m_list = scroll->m_contentLayer;
-
-    auto* menu = CCMenu::create();
-    m_mainLayer->addChild(menu);
-
-    // Add-action menu: pick type then event.
+    // Add-action picker: a reliable list of choices (not a node graph).
     struct Choice { const char* label; ActionType type; EventType event; };
     static const Choice choices[] = {
         {"Open Popup", ActionType::OpenPopup, EventType::OnClick},
         {"Close Popup", ActionType::ClosePopup, EventType::OnClick},
         {"Open Screen", ActionType::OpenScreen, EventType::OnClick},
-        {"Change Label Text", ActionType::ChangeLabelText, EventType::OnClick},
+        {"Change Label", ActionType::ChangeLabelText, EventType::OnClick},
         {"Show Element", ActionType::ShowElement, EventType::OnClick},
         {"Hide Element", ActionType::HideElement, EventType::OnClick},
-        {"Toggle Visibility", ActionType::ToggleVisibility, EventType::OnClick},
+        {"Toggle Visible", ActionType::ToggleVisibility, EventType::OnClick},
         {"Set Enabled", ActionType::SetEnabled, EventType::OnValueChanged},
         {"Set Opacity", ActionType::SetOpacity, EventType::OnClick},
-        {"Set Setting Value", ActionType::SetValue, EventType::OnValueChanged},
+        {"Set Setting", ActionType::SetValue, EventType::OnValueChanged},
         {"Save Setting", ActionType::SaveSetting, EventType::OnClick},
         {"Notify", ActionType::Notify, EventType::OnClick},
         {"Run Action", ActionType::RunAction, EventType::OnClick},
     };
 
-    float x = 40.f;
-    float y = 270.f;
-    int i = 0;
+    auto* picker = CCMenu::create();
+    picker->setPosition({0.f, 72.f});
+    this->addChild(picker, 10);
     for (const auto& c : choices) {
-        auto* btn = makeButton(c.label, [this, c]() { this->addAction(c.type, c.event); }, 120.f, 0.35f);
-        if (btn) {
-            btn->setPosition({x, y});
-            menu->addChild(btn);
-        }
-        x += 130.f;
-        if (++i % 3 == 0) { x = 40.f; y -= 30.f; }
+        if (auto* b = makeButton(c.label, [this, c]() { this->addAction(c.type, c.event); }, 0.35f))
+            picker->addChild(b);
     }
+    picker->alignItemsInColumns(4, 4, 4, 1, 0);
+
+    auto* listTitle = makeLabel("Actions on the selected element", "bigFont.fnt", 0.4f);
+    listTitle->setPosition({0.f, -14.f});
+    this->addChild(listTitle, 10);
+
+    auto* scroll = ScrollLayer::create({410.f, 108.f});
+    scroll->setPosition({-205.f, -158.f});
+    this->addChild(scroll, 10);
+    m_list = scroll->m_contentLayer;
 
     this->rebuild();
     return true;
@@ -199,17 +196,17 @@ void ActionEditor::rebuild() {
     for (size_t i = 0; i < m_state->project.actions.size(); i++)
         if (m_state->project.actions[i].params["owner"].asString() == owner) indices.push_back(i);
 
-    m_list->setContentSize({390.f, std::max(1.f, indices.size() * 30.f + 8.f)});
+    m_list->setContentSize({410.f, std::max(1.f, indices.size() * 30.f + 8.f)});
 
     if (owner.empty()) {
         auto* l = makeLabel("No element selected.", "bigFont.fnt", 0.4f);
-        l->setPosition({195.f, 20.f});
+        l->setPosition({205.f, 20.f});
         m_list->addChild(l);
         return;
     }
     if (indices.empty()) {
         auto* l = makeLabel("No actions yet. Add one above.", "bigFont.fnt", 0.4f);
-        l->setPosition({195.f, 20.f});
+        l->setPosition({205.f, 20.f});
         m_list->addChild(l);
         return;
     }
@@ -230,7 +227,7 @@ void ActionEditor::rebuild() {
         size_t idx = i;
         auto* paramsBtn = makeButton("Params", [this, idx]() {
             if (idx < m_state->project.actions.size()) this->openParams(m_state->project.actions[idx], idx);
-        }, 70.f, 0.32f);
+        }, 0.32f);
         paramsBtn->setPosition({300.f, y});
         row->addChild(paramsBtn);
 
@@ -241,7 +238,7 @@ void ActionEditor::rebuild() {
             if (m_commit) m_commit("Delete action");
             if (m_onChanged) m_onChanged();
             this->rebuild();
-        }, 30.f, 0.32f);
+        }, 0.32f);
         delBtn->setPosition({355.f, y});
         row->addChild(delBtn);
 

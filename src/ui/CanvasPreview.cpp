@@ -9,22 +9,25 @@ using namespace geode::prelude;
 
 namespace gmb {
 
-bool CanvasPreview::init(EditorState* state, std::function<void(const std::string&)> commit) {
+bool CanvasPreview::init(EditorState* state, std::function<void(const std::string&)> commit, cocos2d::CCSize size) {
     if (!CCLayer::init()) return false;
     m_state = state;
     m_commit = std::move(commit);
-    this->setContentSize({400.f, 300.f});
+    this->setContentSize(size);
 
-    auto* bg = makePanel({400.f, 300.f}, {20, 20, 24}, 220);
+    auto* bg = makePanel(size, {20, 20, 24}, 220);
     if (bg) this->addChild(bg);
 
-    m_world = cocos2d::CCNode::create();
-    m_world->setPosition({0.f, 0.f});
-    this->addChild(m_world);
+    // The preview is read-only (touches are handled by this layer), so the
+    // world is a plain node; CCMenu must only contain CCMenuItem children.
+    auto* world = cocos2d::CCNode::create();
+    world->setPosition({0.f, 0.f});
+    this->addChild(world);
+    m_world = world;
 
     m_grid = cocos2d::CCDrawNode::create();
     this->addChild(m_grid);
-    this->drawGrid({400.f, 300.f});
+    this->drawGrid(size);
 
     this->setTouchEnabled(true);
     this->setTouchMode(cocos2d::kCCTouchesOneByOne);
@@ -32,9 +35,9 @@ bool CanvasPreview::init(EditorState* state, std::function<void(const std::strin
     return true;
 }
 
-CanvasPreview* CanvasPreview::create(EditorState* state, std::function<void(const std::string&)> commit) {
+CanvasPreview* CanvasPreview::create(EditorState* state, std::function<void(const std::string&)> commit, cocos2d::CCSize size) {
     auto* ret = new CanvasPreview();
-    if (ret->init(state, std::move(commit))) { ret->autorelease(); return ret; }
+    if (ret->init(state, std::move(commit), size)) { ret->autorelease(); return ret; }
     delete ret;
     return nullptr;
 }
@@ -169,9 +172,11 @@ void CanvasPreview::rebuild() {
     if (p.screens.empty()) return;
     const Screen& s = p.screens.front();
 
+    auto csize = this->getContentSize();
+
     // Background panel to make the preview boundary explicit.
     auto* bounds = cocos2d::CCDrawNode::create();
-    cocos2d::CCPoint verts[4] = {{0, 0}, {480.f, 0}, {480.f, 320.f}, {0, 320.f}};
+    cocos2d::CCPoint verts[4] = {{0, 0}, {csize.width, 0}, {csize.width, csize.height}, {0, csize.height}};
     bounds->drawPolygon(verts, 4, {0, 0, 0, 0}, 1.f, {120, 120, 150, 200});
     m_world->addChild(bounds, -2);
 
@@ -193,7 +198,7 @@ void CanvasPreview::rebuild() {
             for (const auto& c : e->children) render(c, childOrigin, cw, ch);
         };
 
-    for (const auto& root : s.roots) render(root, {0.f, 0.f}, 480.f, 320.f);
+    for (const auto& root : s.roots) render(root, {0.f, 0.f}, csize.width, csize.height);
 }
 
 std::string CanvasPreview::elementAt(cocos2d::CCPoint worldPoint, std::vector<std::string>& hits) const {

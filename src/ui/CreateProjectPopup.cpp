@@ -62,7 +62,7 @@ bool CreateProjectPopup::init(std::function<void(Project)> onCreate) {
     if (m_win) m_win->toggle(true);
     if (m_android) m_android->toggle(true);
 
-    auto* createBtn = makeButton("Create", [this]() { this->onCreateClicked(nullptr); }, 90.f);
+    auto* createBtn = makeButton("Create", [this]() { this->onCreateClicked(nullptr); });
     createBtn->setPosition({0.f, -110.f});
     menu->addChild(createBtn);
 

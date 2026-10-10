@@ -34,45 +34,53 @@ bool BuilderLayer::init() {
     auto* bg = createLayerBG();
     if (bg) this->addChild(bg);
 
-    auto* title = makeLabel("Geode Mod Builder", "goldFont.fnt", 0.9f);
-    title->setPosition({win.width / 2.f, win.height - 40.f});
+    auto* title = makeLabel("Geode Mod Builder", "goldFont.fnt", 0.8f);
+    title->setPosition({win.width / 2.f, win.height - 22.f});
     this->addChild(title);
 
-    auto* menu = CCMenu::create();
-    this->addChild(menu);
+    // Top action row. Uses CCMenu + equal spacing so buttons never overlap at
+    // the fixed GD design resolution.
+    auto* top = CCMenu::create();
+    top->setPosition({win.width / 2.f, win.height - 52.f});
+    top->setScale(0.5f);
+    this->addChild(top, 5);
+    auto addTop = [&](const char* label, std::function<void()> cb) {
+        if (auto* b = makeButton(label, std::move(cb), 0.5f)) top->addChild(b);
+    };
+    addTop("New Project", [this]() { this->onNewProject(nullptr); });
+    addTop("Refresh",     [this]() { this->onRefresh(nullptr); });
+    addTop("Settings",    [this]() { this->onSettings(nullptr); });
+    addTop("Help",        [this]() { this->onHelp(nullptr); });
+    top->alignItemsHorizontallyWithPadding(6.f);
 
-    auto* newBtn = makeButton("New Project", [this]() { this->onNewProject(nullptr); }, 110.f);
-    newBtn->setPosition({win.width / 2.f - 130.f, win.height - 80.f});
-    menu->addChild(newBtn);
-
-    auto* refreshBtn = makeButton("Refresh", [this]() { this->onRefresh(nullptr); }, 90.f);
-    refreshBtn->setPosition({win.width / 2.f, win.height - 80.f});
-    menu->addChild(refreshBtn);
-
-    auto* settingsBtn = makeButton("Settings", [this]() { this->onSettings(nullptr); }, 90.f);
-    settingsBtn->setPosition({win.width / 2.f + 110.f, win.height - 80.f});
-    menu->addChild(settingsBtn);
-
-    auto* helpBtn = makeButton("Help", [this]() { this->onHelp(nullptr); }, 90.f);
-    helpBtn->setPosition({win.width / 2.f + 220.f, win.height - 80.f});
-    menu->addChild(helpBtn);
+    // Back to the main menu.
+    auto* backMenu = CCMenu::create();
+    backMenu->setPosition({0.f, 0.f});
+    this->addChild(backMenu, 5);
+    if (auto* back = makeButton("Back", [this]() {
+            CCDirector::sharedDirector()->popScene();
+        }, 0.5f)) {
+        back->setPosition({40.f, 20.f});
+        backMenu->addChild(back);
+    }
 
     // Scrollable project list.
     float listW = 360.f;
-    float listH = win.height - 195.f;
-    auto* scroll = ScrollLayer::create({listW, listH});
-    scroll->setPosition({win.width / 2.f - listW / 2.f, 60.f});
+    float listTop = win.height - 128.f;
+    float listBottom = 46.f;
+    auto* scroll = ScrollLayer::create({listW, listTop - listBottom});
+    scroll->setPosition({win.width / 2.f - listW / 2.f, listBottom});
     this->addChild(scroll);
     m_listContainer = scroll->m_contentLayer;
 
-    // Recent projects (top five, newest first).
+    // Recent projects (top few, newest first).
     auto* recentLabel = makeLabel("Recent Projects", "goldFont.fnt", 0.5f);
     recentLabel->setAnchorPoint({0.5f, 0.5f});
-    recentLabel->setPosition({win.width / 2.f, win.height - 100.f});
+    recentLabel->setPosition({win.width / 2.f, listTop - 4.f});
     this->addChild(recentLabel);
 
     auto* recent = CCNode::create();
-    recent->setPosition({win.width / 2.f, win.height - 122.f});
+    recent->setPosition({win.width / 2.f, listTop - 24.f});
     this->addChild(recent);
     m_recentContainer = recent;
 
@@ -107,7 +115,7 @@ void BuilderLayer::rebuildRecent() {
     for (const auto& info : projects) {
         if (shown >= 4) break;
         std::string fn = info.fileName;
-        auto* b = makeButton(info.displayName, [this, fn]() { this->openProject(fn); }, 96.f, 0.35f);
+        auto* b = makeButton(info.displayName, [this, fn]() { this->openProject(fn); }, 0.35f);
         b->setPosition({x, 0.f});
         menu->addChild(b);
         x += 100.f;
@@ -150,7 +158,7 @@ void BuilderLayer::rebuildList() {
         m_listContainer->addChild(nameLbl);
 
         std::string fn = info.fileName;
-        auto* openBtn = makeButton("Open", [this, fn]() { this->openProject(fn); }, 60.f);
+        auto* openBtn = makeButton("Open", [this, fn]() { this->openProject(fn); });
         openBtn->setPosition({width - 130.f, y});
         row->addChild(openBtn);
 
@@ -168,7 +176,7 @@ void BuilderLayer::rebuildList() {
                     this->rebuildList();
                     this->rebuildRecent();
                 });
-        }, 70.f);
+        });
         delBtn->setPosition({width - 60.f, y});
         row->addChild(delBtn);
 
@@ -195,6 +203,10 @@ void BuilderLayer::onNewProject(cocos2d::CCObject*) {
 void BuilderLayer::onRefresh(cocos2d::CCObject*) {
     this->rebuildList();
     this->rebuildRecent();
+}
+
+void BuilderLayer::keyBackClicked() {
+    CCDirector::sharedDirector()->popScene();
 }
 
 void BuilderLayer::onSettings(cocos2d::CCObject*) {

@@ -1,37 +1,28 @@
 #include "ui/Ui.hpp"
 
-#include <Geode/ui/Button.hpp>
 #include <Geode/ui/NineSlice.hpp>
 #include <Geode/ui/Notification.hpp>
 #include <cstdio>
 
+using namespace geode::prelude;
+
 namespace gmb {
 
-geode::Button* makeButton(const std::string& text, std::function<void()> onPress, float width, float scale) {
-    auto* label = cocos2d::CCLabelBMFont::create(text.c_str(), "bigFont.fnt");
-    if (label) label->setScale(scale);
-
-    geode::Button* btn = nullptr;
-    if (width > 0.f && label) {
-        // Use a GD nine-slice frame name, not a file name.
-        auto bg = geode::NineSlice::createWithSpriteFrameName("square02_001.png");
-        if (bg) {
-            bg->setContentSize({width, 22.f});
-            bg->setColor({60, 60, 74});
-            auto sz = bg->getContentSize();
-            label->setPosition({sz.width / 2.f, sz.height / 2.f});
-            bg->addChild(label);
-            btn = geode::Button::createWithNode(bg, [onPress](geode::Button*) { if (onPress) onPress(); });
-        }
-    }
-    if (!btn && label) {
-        btn = geode::Button::createWithNode(label, [onPress](geode::Button*) { if (onPress) onPress(); });
-    }
-    return btn;
+CCMenuItemSpriteExtra* makeButton(const std::string& text, std::function<void()> onPress, float scale) {
+    auto* spr = ButtonSprite::create(text.c_str());
+    if (!spr) return nullptr;
+    // Clamp to a sane range so text stays readable.
+    if (scale < 0.3f) scale = 0.3f;
+    if (scale > 1.0f) scale = 1.0f;
+    spr->setScale(scale);
+    return CCMenuItemExt::createSpriteExtra(
+        spr, [onPress](CCMenuItemSpriteExtra*) { if (onPress) onPress(); });
 }
 
-cocos2d::CCNode* makePanel(cocos2d::CCSize const& size, cocos2d::ccColor3B color, GLubyte opacity) {
-    auto n = geode::NineSlice::createWithSpriteFrameName("square02_001.png");
+cocos2d::CCNodeRGBA* makePanel(cocos2d::CCSize const& size, cocos2d::ccColor3B color, GLubyte opacity) {
+    // Use the texture file name directly (not a sprite frame name). GD's
+    // texture files always load, and NineSlice's default insets suit them.
+    auto n = NineSlice::create("square02b_001.png");
     if (n) {
         n->setContentSize(size);
         n->setColor(color);
@@ -46,12 +37,6 @@ cocos2d::CCLabelBMFont* makeLabel(const std::string& text, const char* font, flo
     auto* l = cocos2d::CCLabelBMFont::create(text.c_str(), font);
     if (l) l->setScale(scale);
     return l;
-}
-
-cocos2d::CCNode* makeDarkBackground(cocos2d::CCSize const& size, cocos2d::CCNode* parent) {
-    auto* bg = makePanel(size, {20, 20, 24}, 240);
-    if (bg && parent) parent->addChild(bg);
-    return bg;
 }
 
 std::string formatFloat(float v) {

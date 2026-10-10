@@ -11,23 +11,28 @@ using namespace geode::prelude;
 
 namespace gmb {
 
-bool ElementTree::init(EditorState* state, std::function<void(const std::string&)> commit) {
+bool ElementTree::init(EditorState* state, std::function<void(const std::string&)> commit, cocos2d::CCSize size) {
     if (!CCNode::init()) return false;
     m_state = state;
     m_commit = std::move(commit);
 
-    this->setContentSize({220.f, 240.f});
+    this->setContentSize(size);
 
-    auto* scroll = ScrollLayer::create({220.f, 240.f});
+    auto* scroll = ScrollLayer::create({size.width, size.height});
     scroll->setPosition({0.f, 0.f});
     this->addChild(scroll);
     m_list = scroll->m_contentLayer;
+
+    // A CCMenu at the list level so row buttons receive touches.
+    m_menu = CCMenu::create();
+    m_menu->setPosition({0.f, 0.f});
+    m_list->addChild(m_menu);
     return true;
 }
 
-ElementTree* ElementTree::create(EditorState* state, std::function<void(const std::string&)> commit) {
+ElementTree* ElementTree::create(EditorState* state, std::function<void(const std::string&)> commit, cocos2d::CCSize size) {
     auto* ret = new ElementTree();
-    if (ret->init(state, std::move(commit))) { ret->autorelease(); return ret; }
+    if (ret->init(state, std::move(commit), size)) { ret->autorelease(); return ret; }
     delete ret;
     return nullptr;
 }
@@ -58,8 +63,9 @@ static void flatten(const Project& p, const std::vector<std::string>& roots, int
 }
 
 void ElementTree::refresh() {
-    if (!m_list) return;
-    m_list->removeAllChildren();
+    if (!m_list || !m_menu) return;
+    m_menu->removeAllChildren();
+    m_menu->setPosition({0.f, 0.f});
     const Project& p = m_state->project;
 
     std::vector<std::pair<std::string, int>> rows;
@@ -74,7 +80,7 @@ void ElementTree::refresh() {
 
     const float rowH = 24.f;
     float total = std::max(1.f, static_cast<float>(rows.size()) * rowH + 8.f);
-    m_list->setContentSize({220.f, total});
+    m_list->setContentSize({this->getContentSize().width, total});
 
     // Build an element id -> has-error set from validation.
     std::vector<std::string> errorIds;
@@ -93,20 +99,18 @@ void ElementTree::refresh() {
         bool hasError = std::find(errorIds.begin(), errorIds.end(), id) != errorIds.end();
         if (hasError) label += "  (!)";
 
-        auto* row = CCMenu::create();
-        row->setPosition({0.f, 0.f});
-        m_list->addChild(row);
-
         auto* btn = makeButton(label, [this, id]() {
             m_state->selectedId = id;
             if (m_commit) m_commit("Select");
-        }, 200.f, 0.4f);
-        btn->setPosition({110.f, y});
-        if (selected || hasError) {
-            if (auto* rgba = typeinfo_cast<cocos2d::CCNodeRGBA*>(btn->getDisplayNode()))
-                rgba->setColor(selected ? cocos2d::ccColor3B{120, 180, 255} : cocos2d::ccColor3B{255, 120, 120});
+        }, 0.4f);
+        if (btn) {
+            btn->setPosition({this->getContentSize().width / 2.f, y});
+            if (selected || hasError) {
+                if (auto* rgba = typeinfo_cast<cocos2d::CCNodeRGBA*>(btn->getNormalImage()))
+                    rgba->setColor(selected ? cocos2d::ccColor3B{120, 180, 255} : cocos2d::ccColor3B{255, 120, 120});
+            }
+            m_menu->addChild(btn);
         }
-        row->addChild(btn);
 
         y -= rowH;
     }
