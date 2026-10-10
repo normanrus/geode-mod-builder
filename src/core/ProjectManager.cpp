@@ -6,6 +6,15 @@
 #include <sstream>
 #include <unordered_set>
 
+#ifdef _WIN32
+#include <io.h>
+#define GMB_POPEN _popen
+#define GMB_PCLOSE _pclose
+#else
+#define GMB_POPEN popen
+#define GMB_PCLOSE pclose
+#endif
+
 namespace fs = std::filesystem;
 
 namespace gmb {
@@ -231,12 +240,12 @@ bool ProjectManager::copyAsset(const std::filesystem::path& source, const std::f
 
 static bool runCapture(const std::string& cmd, std::string& output) {
     // Only used with fixed, non-user-controlled command strings.
-    FILE* pipe = popen(cmd.c_str(), "r");
+    FILE* pipe = GMB_POPEN(cmd.c_str(), "r");
     if (!pipe) return false;
     char buf[256];
     output.clear();
     while (fgets(buf, sizeof(buf), pipe)) output += buf;
-    int rc = pclose(pipe);
+    int rc = GMB_PCLOSE(pipe);
     return rc == 0;
 }
 

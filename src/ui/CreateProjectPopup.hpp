@@ -18,10 +18,10 @@ protected:
     geode::TextInput* m_version = nullptr;
     geode::TextInput* m_geode = nullptr;
     geode::TextInput* m_description = nullptr;
-    cocos2d::CCMenuItemToggler* m_win = nullptr;
-    cocos2d::CCMenuItemToggler* m_android = nullptr;
-    cocos2d::CCMenuItemToggler* m_mac = nullptr;
-    cocos2d::CCMenuItemToggler* m_ios = nullptr;
+    CCMenuItemToggler* m_win = nullptr;
+    CCMenuItemToggler* m_android = nullptr;
+    CCMenuItemToggler* m_mac = nullptr;
+    CCMenuItemToggler* m_ios = nullptr;
     std::function<void(Project)> m_onCreate;
 
     bool init(std::function<void(Project)> onCreate);

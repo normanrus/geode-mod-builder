@@ -179,7 +179,7 @@ void PropertiesPanel::refresh() {
         auto* visTog = CCMenuItemExt::createTogglerWithStandardSprites(0.7f, [this](CCMenuItemToggler* t) {
             onCommonBool("visible", !t->isToggled());
         });
-        if (!e->visible) visTog->toggle();
+        if (!e->visible) visTog->toggle(true);
         visTog->setPosition({200.f, y});
         visMenu->addChild(visTog);
         addRow("Visible", nullptr, y);
@@ -190,7 +190,7 @@ void PropertiesPanel::refresh() {
         auto* enTog = CCMenuItemExt::createTogglerWithStandardSprites(0.7f, [this](CCMenuItemToggler* t) {
             onCommonBool("enabled", !t->isToggled());
         });
-        if (!e->enabled) enTog->toggle();
+        if (!e->enabled) enTog->toggle(true);
         enTog->setPosition({200.f, y});
         enMenu->addChild(enTog);
         addRow("Enabled", nullptr, y);

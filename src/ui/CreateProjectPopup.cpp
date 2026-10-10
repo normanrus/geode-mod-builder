@@ -45,7 +45,7 @@ bool CreateProjectPopup::init(std::function<void(Project)> onCreate) {
     platLabel->setPosition({-140.f, y});
     m_mainLayer->addChild(platLabel);
 
-    auto mkToggle = [&](cocos2d::CCMenuItemToggler*& out, const char* text, float x) {
+    auto mkToggle = [&](CCMenuItemToggler*& out, const char* text, float x) {
         out = CCMenuItemExt::createTogglerWithStandardSprites(0.7f, [](CCMenuItemToggler*) {});
         auto* lbl = makeLabel(text, "bigFont.fnt", 0.4f);
         lbl->setPosition({28.f, 0.f});
@@ -59,8 +59,8 @@ bool CreateProjectPopup::init(std::function<void(Project)> onCreate) {
     mkToggle(m_ios, "iOS", 210.f);
 
     // Defaults: Windows + Android on.
-    if (m_win) m_win->toggle();
-    if (m_android) m_android->toggle();
+    if (m_win) m_win->toggle(true);
+    if (m_android) m_android->toggle(true);
 
     auto* createBtn = makeButton("Create", [this]() { this->onCreateClicked(nullptr); }, 90.f);
     createBtn->setPosition({0.f, -110.f});
