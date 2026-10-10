@@ -162,7 +162,7 @@ struct ProjectMeta {
     std::string modId;      // geode mod id, lowercase, dots/dashes/underscores
     std::string developer;
     std::string version = "v1.0.0";
-    std::string geodeVersion = "v5.11.1";
+    std::string geodeVersion = "5.11.1";
     std::string gdWin = "2.2081";
     std::string gdAndroid = "2.2081";
     std::string gdMac = "2.2081";

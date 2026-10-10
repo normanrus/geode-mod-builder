@@ -261,7 +261,7 @@ ProjectMeta ProjectMeta::fromJson(const Json& j) {
     m.modId = j["modId"].asString();
     m.developer = j["developer"].asString();
     m.version = j["version"].asString("v1.0.0");
-    m.geodeVersion = j["geodeVersion"].asString("v5.11.1");
+    m.geodeVersion = j["geodeVersion"].asString("5.11.1");
     if (j["gd"].isObject()) {
         const auto& gd = j["gd"];
         if (gd.has("win")) { m.gdWin = gd["win"].asString("2.2081"); m.platformsWin = true; }

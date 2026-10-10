@@ -599,7 +599,7 @@ static std::string generateGeneratedUISource(const GenContext& ctx) {
 
 static std::string generateModJson(const Project& p) {
     Json m = Json::object();
-    m["geode"] = p.meta.geodeVersion.empty() ? "v5.11.1" : p.meta.geodeVersion;
+    m["geode"] = p.meta.geodeVersion.empty() ? "5.11.1" : p.meta.geodeVersion;
     Json gd = Json::object();
     if (p.meta.platformsWin) gd["win"] = p.meta.gdWin;
     if (p.meta.platformsAndroid) gd["android"] = p.meta.gdAndroid;

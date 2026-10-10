@@ -35,8 +35,8 @@ bool CreateProjectPopup::init(std::function<void(Project)> onCreate) {
     addField("Developer", m_developer, "Your name", geode::CommonFilter::Any);
     addField("Version", m_version, "v1.0.0", geode::CommonFilter::Any, 120.f);
     m_version->setString("v1.0.0");
-    addField("Geode", m_geode, "v5.11.1", geode::CommonFilter::Any, 120.f);
-    m_geode->setString("v5.11.1");
+    addField("Geode", m_geode, "5.11.1", geode::CommonFilter::Any, 120.f);
+    m_geode->setString("5.11.1");
     addField("Description", m_description, "Short description", geode::CommonFilter::Any);
 
     // Platform toggles.
